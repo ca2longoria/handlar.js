@@ -57,13 +57,13 @@ handle.a.$on('change',function(val,old){console.log('change! '+old+'=>'+val)})
 handle.a = 3
 -> change! 1 => 3
 
-# This one is pretty strange.  I'm still mulling over how to do this properly,
-# since *delete* can't be overridden.
+// This one is pretty strange.  I'm still mulling over how to do this properly,
+// since *delete* can't be overridden.
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
 handle.a = M.Delete
 -> delete! 3
 
-# And now it looks like...
+// And now it looks like...
 handle.$
 -> {b:{x:'X',y:'Y'}}
 ```
