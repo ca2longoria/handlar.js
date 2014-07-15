@@ -22,6 +22,7 @@ Simple MVC without the V or the C.
         - $ : _function_
         - $on : _function_
         - $off : _function_
+        - $delete : _function_
         - \<property\>... : _Handle_
 
 #### Events
@@ -133,6 +134,10 @@ Adds an event listener.
 ##### Handle.$off
 Removes an event listener.
 ###### function(eventName, func)
+
+##### Handle.$delete
+Removes the calling Handle of the `$delete()` function from its parent.
+###### function()
 
 ##### Handle.\<property\>...
 Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
