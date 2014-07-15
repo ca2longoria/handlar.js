@@ -24,6 +24,19 @@ Simple MVC without the V or the C.
         - $off : _function_
         - \<property\>... : _Handle_
 
+#### Events
+
+- implemented
+    - all
+    - change
+    - delete
+
+- coming...
+    - add
+    - invalid
+    - remove
+    - sort
+
 ---
 
 #### Examples
