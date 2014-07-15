@@ -1,31 +1,31 @@
 
-#handlar.js
+###handlar.js
 
 Simple MVC without the V or the C.
+
+---
 
 - Simple JSON object event handling library.
 - Inspired by the idea of a client-side unified object model.
 - And on realizing _backbone.js_ has way more complexity than I need.
 
----
-
-### Dependencies
+#### Dependencies
 - underscore.js
 - _.defineProperty_-compatible browser
 
 
 ---
 
-### Object Structure
+#### Object Structure
 
 - Model
 - Model.Handle
 
 ---
 
-### Examples
+#### Examples
 
-#### Object Instantiation
+##### Object Instantiation
 
 ```javascript
 M = new Model();
