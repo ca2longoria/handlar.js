@@ -34,7 +34,7 @@ handle = new M.Handle({
 });
 ```
 
-#### JSON Object
+##### JSON Object
 ```javascript
 handle.a.$
 -> 1
@@ -44,7 +44,7 @@ handle.b.x.$
 -> "X"
 ```
 
-#### Event Handling
+##### Event Handling
 ```javascript
 handle.a.$on('change',function(val,old){console.log('change! '+old+'=>'+val)})
 handle.a = 3
