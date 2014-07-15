@@ -26,12 +26,12 @@ Simple MVC without the V or the C.
 
 #### Events
 
-- implemented
+- **implemented**
     - all
     - change
     - delete
 
-- coming...
+- **coming...**
     - add
     - invalid
     - remove
