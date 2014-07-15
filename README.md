@@ -107,18 +107,27 @@ handle.b.x = 'ecks'
 #### Reference
 
 ##### Model
+These will eventually be more complex, perhaps storing url data akin to _backbone.js_'s process, but for now, it acts closer to a namespace than anything else.
 
 ##### Model.on
+... Except for this, which I am considering removing.
 
 ##### Model.Delete
+... And this queerness, as a yet-decided deletion method.
 
 ##### Handle
+This is the most important object "class".  It creates a clone of the supplied object, and can be referenced in a very close to natural object handling manner.
+
+Do note, it is intended to work iwth JSON-parsable objects only.
 
 ##### Handle.$
+Returns a clone Handle structure, as a normal JSON object.
 
 ##### Handle.$on
+Adds an event listener.
 
 ##### Handle.$off
+Removes an event listener.
 
 ##### Handle.\<property\>...
-
+Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations.without having to finish the reference with a `.$`.
