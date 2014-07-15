@@ -3,8 +3,6 @@
 
 Simple MVC without the V or the C.
 
----
-
 - Simple JSON object event handling library.
 - Inspired by the idea of a client-side unified object model.
 - And on realizing _backbone.js_ has way more complexity than I need.
