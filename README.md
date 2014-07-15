@@ -13,11 +13,6 @@ Simple MVC without the V or the C.
 - underscore.js
 - _.defineProperty_-compatible browser
 
-#### Object Structure
-
-- Model
-- Model.Handle
-
 ---
 
 #### Examples
@@ -83,4 +78,14 @@ handle.b.x = 'ecks'
 -> /* Nothing outputs */
 ```
 
+---
 
+#### Object Structure
+
+- **Model**
+    - on : _function(handle,eventName,func,args)_
+    - **Handle**
+        - $ : _function()_
+        - $on : _function(eventName,func,args)_
+        - $off : _function(eventName,func)_
+        - \<property\>... : _Handle_
