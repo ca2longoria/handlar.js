@@ -18,11 +18,11 @@ Simple MVC without the V or the C.
 #### Object Structure
 
 - **Model**
-    - on : _function(handle,eventName,func,args)_
+    - on : _function_
     - **Handle**
-        - $ : _function()_
-        - $on : _function(eventName,func,args)_
-        - $off : _function(eventName,func)_
+        - $ : _function_
+        - $on : _function_
+        - $off : _function_
         - \<property\>... : _Handle_
 
 ---
