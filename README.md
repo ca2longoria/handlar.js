@@ -99,5 +99,26 @@ handle.b.x = 'axe'
 // The removal
 handle.b.x.$off('change',q)
 handle.b.x = 'ecks'
--> /* Nothing outputs */
+->
 ```
+
+---
+
+#### Reference
+
+##### Model
+
+##### Model.on
+
+##### Model.Delete
+
+##### Handle
+
+##### Handle.$
+
+##### Handle.$on
+
+##### Handle.$off
+
+##### Handle.\<property\>...
+
