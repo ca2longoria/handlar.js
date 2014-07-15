@@ -90,7 +90,9 @@ Model = (function()
 			}
 		});
 		
-		//console.log('Handle('+ob+')',self.__id);
+		if (typeof ob !== 'object')
+			this.valueOf = function()
+			{ console.log('val?',ob); return ob; };
 		
 		if (typeof ob === 'object')
 		for (var p in ob)
@@ -104,12 +106,7 @@ Model = (function()
 			Object.defineProperty(ob[p],'$delete',{
 				enumerable:false,
 				configurable:false,
-				value:(function(k){return function()
-				{
-					console.log('special.delete',self,k,special.delete);
-					console.log('              ',self[k],special.delete);
-					self[k] = special.delete;
-				}})(p)
+				value:(function(k){return function(){ self[k] = special.delete }})(p)
 			});
 			
 			Object.defineProperty(this,p,{
@@ -121,8 +118,6 @@ Model = (function()
 					var oldHandle = ob[k];
 					var newHandle;
 					
-						console.log('Ragvagbag');
-						
 					if (val == special.delete)
 					{
 						// NOTE: Deletion needs to go somewhere more accissible.
@@ -146,22 +141,15 @@ Model = (function()
 								oldHandle[x] = special.delete;
 						//*/
 						
-						console.log('deleting!',oldHandle,k);
 						// Remove events from listeners object.
 						delete listeners[oldHandle.__id];
 						delete ob[k];
 						delete self[k];
-						console.log('still there?',console.log(ob));
-						console.log(Object.getOwnPropertyNames(ob));
 						return;
 					}
 					
 					newHandle = (val instanceof Handle ? val : new Handle(val));
 					ob[k] = newHandle;
-					
-					if (typeof val !== 'object')
-						newHandle.valueOf = function()
-						{ console.log('val?',val); return val };
 					
 					// Modify listeners object.
 					// - Copy oldHandle's listeners over to newHandle's.
