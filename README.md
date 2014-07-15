@@ -18,6 +18,8 @@ Simple MVC without the V or the C.
 - Model
 - Model.Handle
 
+---
+
 #### Examples
 
 ##### Object Instantiation
@@ -44,14 +46,18 @@ handle.b.x.$
 -> "X"
 ```
 
+===
+
 ##### Event Handling
+#####Event: `change`
 ```javascript
-// Event: change
 handle.a.$on('change',function(val,old){console.log('change! '+old+'=>'+val)})
 handle.a = 3
 -> change! 1 => 3
+```
 
-// Event: delete
+##### Event: `delete`
+```javascript
 // This one is pretty strange.  I'm still mulling over how to do this properly,
 // since *delete* can't be overridden.
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
@@ -61,8 +67,10 @@ handle.a = M.Delete
 // And now it looks like...
 handle.$
 -> {b:{x:'X',y:'Y'}}
+```
 
-// Event removal
+##### Event removal
+```javascript
 // Some setup
 q = function(){console.log('All is transient')}
 handle.b.x.$on('change',q)
