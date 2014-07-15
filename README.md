@@ -76,9 +76,9 @@ handle.a = 3
 ```
 
 ##### Event: `delete`
+This one is pretty strange.  I'm still mulling over how to do this properly, since *delete* can't be overridden.
+
 ```javascript
-// This one is pretty strange.  I'm still mulling over how to do this properly,
-// since *delete* can't be overridden.
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
 handle.a = M.Delete
 -> delete! 3
