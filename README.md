@@ -115,6 +115,8 @@ These will eventually be more complex, perhaps storing url data akin to _backbon
 ##### Model.Delete
 ... And this queerness, as a yet-decided deletion method.
 
+===
+
 ##### Handle
 This is the most important object "class".  It creates a clone of the supplied object, and can be referenced in a very close to natural object handling manner.
 
@@ -122,12 +124,15 @@ Do note, it is intended to work iwth JSON-parsable objects only.
 
 ##### Handle.$
 Returns a clone Handle structure, as a normal JSON object.
+###### function()
 
 ##### Handle.$on
 Adds an event listener.
+###### function(eventName, func, args)
 
 ##### Handle.$off
 Removes an event listener.
+###### function(eventName, func)
 
 ##### Handle.\<property\>...
-Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations.without having to finish the reference with a `.$`.
+Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
