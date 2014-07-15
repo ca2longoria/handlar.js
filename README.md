@@ -22,6 +22,7 @@ Simple MVC without the V or the C.
         - $ : _function_
         - $on : _function_
         - $off : _function_
+        - $delete : _function_
         - \<property\>... : _Handle_
 
 #### Events
@@ -76,11 +77,11 @@ handle.a = 3
 ```
 
 ##### Event: `delete`
-This one is pretty strange.  I'm still mulling over how to do this properly, since *delete* can't be overridden.
+`$delete()` feels like it ought take an argument and delete its caller's property, rather than deleting the caller, itself.  Will consider this for later.
 
 ```javascript
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
-handle.a = M.Delete
+handle.a.$delete()
 -> delete! 3
 
 // And now it looks like...
@@ -133,6 +134,10 @@ Adds an event listener.
 ##### Handle.$off
 Removes an event listener.
 ###### function(eventName, func)
+
+##### Handle.$delete
+Removes the calling Handle of the `$delete()` function from its parent.
+###### function()
 
 ##### Handle.\<property\>...
 Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
