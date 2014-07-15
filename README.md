@@ -107,7 +107,7 @@ handle.b.x = 'ecks'
 #### Reference
 
 ##### Model
-These will eventually be more complex, perhaps storing url data akin to _backbone.js_'s process, but for now, it acts closer to a namespace than anything else.
+These will eventually be more complex, perhaps storing url data akin to _backbone.js_' process, but for now, it acts closer to a namespace than anything else.
 
 ##### Model.on
 ... Except for this, which I am considering removing.
