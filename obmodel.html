@@ -103,15 +103,30 @@ Model = (function()
 			ob[p] = new Handle(ob[p]);
 			ob[p].__parent = this;
 			
+			// NOTE: Put this here for private access to its parent while
+			//   retaining its given property name.
+			Object.defineProperty(ob[p],'$delete',{
+				enumerable:false,
+				configurable:false,
+				value:(function(k){return function()
+				{
+					console.log('special.delete',self,k,special.delete);
+					console.log('              ',self[k],special.delete);
+					self[k] = special.delete;
+				}})(p)
+			});
+			
 			Object.defineProperty(this,p,{
 				enumerable:true,
-				configurable:false,
+				configurable:true,
 				get:(function(k){return function(){return ob[k]}})(p),
 				set:(function(k){return function(val)
 				{
 					var oldHandle = ob[k];
 					var newHandle;
 					
+						console.log('Ragvagbag');
+						
 					if (val == special.delete)
 					{
 						// NOTE: Deletion needs to go somewhere more accissible.
@@ -129,14 +144,19 @@ Model = (function()
 						// NOTE: WAAAAIT!
 						//   This must recurse.  It needs to recurse.
 						//   Or does it?  What if something else is using these?
+						/*
 						for (var x in oldHandle)
 							if (oldHandle[x] instanceof Handle)
 								oldHandle[x] = special.delete;
+						//*/
 						
+						console.log('deleting!',oldHandle,k);
 						// Remove events from listeners object.
 						delete listeners[oldHandle.__id];
 						delete ob[k];
 						delete self[k];
+						console.log('still there?',console.log(ob));
+						console.log(Object.getOwnPropertyNames(ob));
 						return;
 					}
 					
