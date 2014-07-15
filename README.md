@@ -70,7 +70,7 @@ handle.b.x.$
 ##### Event Handling
 #####Event: `change`
 ```javascript
-handle.a.$on('change',function(val,old){console.log('change! '+old+'=>'+val)})
+handle.a.$on('change',function(val,old){console.log('change! '+old+' => '+val)})
 handle.a = 3
 -> change! 1 => 3
 ```
