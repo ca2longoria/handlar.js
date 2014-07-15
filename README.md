@@ -1,5 +1,5 @@
 
-#handlar.js
+###handlar.js
 
 Simple MVC without the V or the C.
 
@@ -9,23 +9,18 @@ Simple MVC without the V or the C.
 
 ---
 
-### Dependencies
+#### Dependencies
 - underscore.js
 - _.defineProperty_-compatible browser
 
-
----
-
-### Object Structure
+#### Object Structure
 
 - Model
 - Model.Handle
 
----
+#### Examples
 
-### Examples
-
-#### Object Instantiation
+##### Object Instantiation
 
 ```javascript
 M = new Model();
@@ -39,7 +34,7 @@ handle = new M.Handle({
 });
 ```
 
-#### JSON Object
+##### JSON Object
 ```javascript
 handle.a.$
 -> 1
@@ -49,12 +44,14 @@ handle.b.x.$
 -> "X"
 ```
 
-#### Event Handling
+##### Event Handling
 ```javascript
+// Event: change
 handle.a.$on('change',function(val,old){console.log('change! '+old+'=>'+val)})
 handle.a = 3
 -> change! 1 => 3
 
+// Event: delete
 // This one is pretty strange.  I'm still mulling over how to do this properly,
 // since *delete* can't be overridden.
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
@@ -64,6 +61,18 @@ handle.a = M.Delete
 // And now it looks like...
 handle.$
 -> {b:{x:'X',y:'Y'}}
+
+// Event removal
+// Some setup
+q = function(){console.log('All is transient')}
+handle.b.x.$on('change',q)
+handle.b.x = 'axe'
+-> All is transient
+
+// The removal
+handle.b.x.$off('change',q)
+handle.b.x = 'ecks'
+-> /* Nothing outputs */
 ```
 
 
