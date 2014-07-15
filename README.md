@@ -7,8 +7,6 @@ Simple MVC without the V or the C.
 - Inspired by the idea of a client-side unified object model.
 - And on realizing _backbone.js_ has way more complexity than I need.
 
----
-
 #### Dependencies
 - underscore.js
 - _.defineProperty_-compatible browser
