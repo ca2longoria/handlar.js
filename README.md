@@ -76,11 +76,11 @@ handle.a = 3
 ```
 
 ##### Event: `delete`
-This one is pretty strange.  I'm still mulling over how to do this properly, since *delete* can't be overridden.
+`$delete()` feels like it ought take an argument and delete its caller's property, rather than deleting the caller, itself.  Will consider this for later.
 
 ```javascript
 handle.a.$on('delete',function(old){console.log('delete! '+old)})
-handle.a = M.Delete
+handle.a.$delete()
 -> delete! 3
 
 // And now it looks like...
