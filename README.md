@@ -19,6 +19,7 @@ Simple MVC without the V or the C.
 
 - **Model**
     - on : _function_
+    - Delete : _object/enum_
     - **Handle**
         - $ : _function_
         - $on : _function_
