@@ -25,6 +25,21 @@ Model = (function()
 		listeners[handle.__id][eventName].push({func:func,args:args});
 	};
 	
+	var offEvent = function(handle,eventName,func)
+	{
+		var events = listeners[handle.__id][eventName]
+		var funcs = events.map(function(a){return a.func});
+		
+		var index = funcs.indexOf(func);
+		
+		console.log(index,funcs);
+		
+		if (index >= 0)
+			listeners[handle.__id][eventName].splice(index,1);
+		
+		return index >= 0;
+	};
+	
 	// NOTE: I want these Handle objects to remain *independent* of Model
 	//   instances, though...  Will think through, later.
 	function Handle(ob)
@@ -50,9 +65,18 @@ Model = (function()
 		
 		Object.defineProperty(this,'$on',{
 			enumerable:false,
-			configuratble:false,
+			configurable:false,
 			value:function(eventName,func,args)
 			{ onEvent(self,eventName,func,args); }
+		});
+		
+		Object.defineProperty(this,'$off',{
+			enumerable:false,
+			configurable:false,
+			value:function(eventName,func)
+			{
+				return offEvent(self,eventName,func);
+			}
 		});
 		
 		Object.defineProperty(this,'$',{
@@ -195,6 +219,8 @@ a = {
 };
 b = new M.Handle(a);
 
+q = function(){console.log('I float, this function that I am')};
+
 function onLoad()
 {
 	M.on(b.a,'change',function()
@@ -206,6 +232,8 @@ function onLoad()
 	
 	b.b.$on('all',function(eventName,args)
 	{ console.log('deese args:',eventName,args); });
+	
+	b.a.$on('change',q);
 }
 
 </script>
