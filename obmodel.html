@@ -22,11 +22,11 @@ q = function(){console.log('I float, this function that I am')};
 
 function onLoad()
 {
-	M.on(b.a,'change',function()
+	b.a.$on('change',function()
 	{
 		console.log('b.a changing!?',arguments);
 	});
-	M.on(b.d,'delete',function(old){console.log('deletin\' dat b.d!',old);});
+	b.d.$on('delete',function(old){console.log('deletin\' dat b.d!',old);});
 	b.d.$on('all',function(ename,args){console.log('d all!',ename,args)});
 	
 	b.b.$on('all',function(eventName,args)

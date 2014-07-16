@@ -49,6 +49,7 @@ Model = (function()
 		ob = (typeof ob === 'object' ?
 				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
 		
+		// Assign immutable id.
 		Object.defineProperty(this,'__id',{
 			enumerable:false,
 			configurable:false,
@@ -57,8 +58,13 @@ Model = (function()
 		});
 		
 		// Add listeners entry, with arrays of event callbacks.
+		//
+		// NOTE: In the event that the listeners object is moved to a private,
+		//   per-Handle var, this... will likely not change much, now that I
+		//   think about it.
 		listeners[this.__id] = {change:[],delete:[],all:[]};
 		
+		// Assign add-event-listener function.
 		Object.defineProperty(this,'$on',{
 			enumerable:false,
 			configurable:false,
@@ -66,6 +72,7 @@ Model = (function()
 			{ onEvent(self,eventName,func,args); }
 		});
 		
+		// Assign remove-event-listener function.
 		Object.defineProperty(this,'$off',{
 			enumerable:false,
 			configurable:false,
@@ -75,6 +82,7 @@ Model = (function()
 			}
 		});
 		
+		// Assign basic JSON-object export function.
 		Object.defineProperty(this,'$',{
 			enumerable:false,
 			configurable:false,
@@ -120,7 +128,9 @@ Model = (function()
 					
 					if (val == special.delete)
 					{
-						// NOTE: Deletion needs to go somewhere more accissible.
+						// NOTE: Deletion needs to go somewhere more accissible.  Now that
+						//   there's a proper $delete method, this ought go somewhere more
+						//   sensible.
 						
 						listeners[oldHandle.__id].delete.map(function(action)
 						{
@@ -135,11 +145,35 @@ Model = (function()
 						// NOTE: WAAAAIT!
 						//   This must recurse.  It needs to recurse.
 						//   Or does it?  What if something else is using these?
-						/*
+						//
+						//   You know what?  This is all based on the idea of a unified
+						//   object model, meaning there is only *one* root object for
+						//   each of these.  Modifying a Handle *should* invalidate all
+						//   the Handles below it. 
+						//*
 						for (var x in oldHandle)
 							if (oldHandle[x] instanceof Handle)
 								oldHandle[x] = special.delete;
 						//*/
+						
+						// NOTE: There is another concern, however.  In the event that a
+						//   Handle is assigned another object structure, creating more
+						//   handles, ought paths/values matching between the recursed
+						//   deleted old and the new created Handle be applied to the new,
+						//   as well?
+						//
+						//   By values, I mean things held by private Model vars,
+						//   like the listeners object.
+						//
+						//   Ultimately, that depends on whether the object is being
+						//   *replaced* or *modified*.  How might we distinguish between
+						//   the two?
+						//
+						//   Maybe... replace = new M.Hanlde({}), modify = {}.
+						//   Or visa-versa.  Could work either way.
+						//
+						//   Save this for a later commit.  Or better yet, make a github
+						//   Issue.
 						
 						// Remove events from listeners object.
 						delete listeners[oldHandle.__id];
@@ -148,6 +182,7 @@ Model = (function()
 						return;
 					}
 					
+					// NOTE: Replace-vs-Modify logic will have to change this, here.
 					newHandle = (val instanceof Handle ? val : new Handle(val));
 					ob[k] = newHandle;
 					
@@ -182,12 +217,6 @@ Model = (function()
 	{
 		var Model = {};
 		
-		this.on = function(handle,eventName,func,args)
-		{
-			//listeners[handle.__id][eventName].push({func:func,args:args})
-			handle.$on(eventName,func,args);
-		};
-		
 		if (params)
 		{
 			
@@ -195,13 +224,14 @@ Model = (function()
 		
 		this.Handle = Handle;
 		
+		/*
 		Object.defineProperty(this,'Delete',{
 			enumerable:false,
 			configurable:false,
 			writable:false,
 			value:special.delete
 		});
-		
+		//*/
 	};
 
 	return Model;
