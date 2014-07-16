@@ -16,8 +16,6 @@ Simple MVC without the V or the C.
 #### Object Structure
 
 - **Model**
-    - on : _function_
-    - Delete : _object/enum_
     - **Handle**
         - $ : _function_
         - $on : _function_
@@ -109,12 +107,6 @@ handle.b.x = 'ecks'
 
 ##### Model
 These will eventually be more complex, perhaps storing url data akin to _backbone.js_' process, but for now, it acts closer to a namespace than anything else.
-
-##### Model.on
-... Except for this, which I am considering removing.
-
-##### Model.Delete
-... And this queerness, as a yet-decided deletion method.
 
 ===
 
