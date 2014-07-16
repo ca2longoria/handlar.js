@@ -36,12 +36,17 @@ Model = (function()
 		return index >= 0;
 	};
 	
-	// NOTE: I want these Handle objects to remain *independent* of Model
-	//   instances, though...  Will think through, later.
 	function Handle(ob)
 	{
-		var self = this;
-		var handle = this;
+		makeHandle(this,ob);
+	}
+	
+	// NOTE: I want these Handle objects to remain *independent* of Model
+	//   instances, though...  Will think through, later.
+	function makeHandle(handle,ob)
+	{
+		var self = handle;
+		var handle = handle;
 		
 		// ob effectively holds a mirror copy of... everthing.  There's a reason I'm
 		// using it, and testing has revealed that reason as valid.  But exactly what
@@ -50,7 +55,7 @@ Model = (function()
 				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
 		
 		// Assign immutable id.
-		Object.defineProperty(this,'__id',{
+		Object.defineProperty(handle,'__id',{
 			enumerable:false,
 			configurable:false,
 			writable:false,
@@ -62,10 +67,10 @@ Model = (function()
 		// NOTE: In the event that the listeners object is moved to a private,
 		//   per-Handle var, this... will likely not change much, now that I
 		//   think about it.
-		listeners[this.__id] = {change:[],delete:[],all:[]};
+		listeners[handle.__id] = {change:[],delete:[],all:[]};
 		
 		// Assign add-event-listener function.
-		Object.defineProperty(this,'$on',{
+		Object.defineProperty(handle,'$on',{
 			enumerable:false,
 			configurable:false,
 			value:function(eventName,func,args)
@@ -73,7 +78,7 @@ Model = (function()
 		});
 		
 		// Assign remove-event-listener function.
-		Object.defineProperty(this,'$off',{
+		Object.defineProperty(handle,'$off',{
 			enumerable:false,
 			configurable:false,
 			value:function(eventName,func)
@@ -83,7 +88,7 @@ Model = (function()
 		});
 		
 		// Assign basic JSON-object export function.
-		Object.defineProperty(this,'$',{
+		Object.defineProperty(handle,'$',{
 			enumerable:false,
 			configurable:false,
 			get:function()
@@ -99,15 +104,22 @@ Model = (function()
 		});
 		
 		if (typeof ob !== 'object')
-			this.valueOf = function()
+		{
+			// NOTE: Looks like defining properties on Number/String/Boolean is
+			//   considered acting on primitives, and is not permitted.  Guess
+			//   creating unique literal value Handles won't be possible.
+			
+			handle.valueOf = function()
 			{ console.log('val?',ob); return ob; };
+		}
 		
 		if (typeof ob === 'object')
 		for (var p in ob)
 		{
 			//ob[p] = (typeof ob[p] === 'object' ? new Handle(ob[p]) : ob[p]);
-			ob[p] = new Handle(ob[p]);
-			ob[p].__parent = this;
+			//ob[p] = new Handle(ob[p]);
+			ob[p] = makeHandle({},ob[p]);
+			ob[p].__parent = handle;
 			
 			// NOTE: Put this here for private access to its parent while
 			//   retaining its given property name.
@@ -117,7 +129,7 @@ Model = (function()
 				value:(function(k){return function(){ self[k] = special.delete }})(p)
 			});
 			
-			Object.defineProperty(this,p,{
+			Object.defineProperty(handle,p,{
 				enumerable:true,
 				configurable:true,
 				get:(function(k){return function(){return ob[k]}})(p),
@@ -183,7 +195,8 @@ Model = (function()
 					}
 					
 					// NOTE: Replace-vs-Modify logic will have to change this, here.
-					newHandle = (val instanceof Handle ? val : new Handle(val));
+					//newHandle = (val instanceof Handle ? val : new Handle(val));
+					newHandle = (val instanceof Handle ? val : makeHandle({},val));
 					ob[k] = newHandle;
 					
 					// Modify listeners object.
@@ -211,6 +224,8 @@ Model = (function()
 				}})(p)
 			});
 		}
+		
+		return handle;
 	}
 	
 	function Model(params)
