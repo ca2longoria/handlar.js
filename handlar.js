@@ -3,6 +3,30 @@ if (!_)
 	throw {name:'RequiresException', message:'Requires underscore.js'};
 
 
+	// Helper function to walk recursively through two objects, together.
+	// - callback: function(a,b,key,path)
+	var pairWalkRec = function pairWalkRec(a,b,path,callback)
+	{
+		if (typeof b === 'undefined')
+			return;
+		
+		for (var p in a)
+		{
+			path.push(p);
+			callback(a,b,p,path);
+			
+			pairWalkRec(a[p],b[p],path,callback);
+			path.pop();
+		}
+	};
+	
+	var pairWalk = function(a,b,callback)
+	{
+		for (var p in a)
+		{
+			pairWalkRec(a,b,[],callback);
+		}
+	}
 // Perhaps the '.__' prefix can be changed to a random string, unique per
 // page load.
 
@@ -14,6 +38,8 @@ Model = (function()
 	var special = {
 		delete:{}
 	};
+	
+	var modelId = _.uniqueId();
 	
 	// NOTE: Playing around with another private var.
 	var onEvent = function(handle,eventName,func,args)
@@ -35,6 +61,7 @@ Model = (function()
 		
 		return index >= 0;
 	};
+	
 	
 	function Handle(ob)
 	{
@@ -59,7 +86,7 @@ Model = (function()
 			enumerable:false,
 			configurable:false,
 			writable:false,
-			value:_.uniqueId()
+			value:modelId+'_'+_.uniqueId()
 		});
 		
 		// Add listeners entry, with arrays of event callbacks.
@@ -109,8 +136,13 @@ Model = (function()
 			//   considered acting on primitives, and is not permitted.  Guess
 			//   creating unique literal value Handles won't be possible.
 			
-			handle.valueOf = function()
-			{ console.log('val?',ob); return ob; };
+			Object.defineProperty(handle,'valueOf',{
+				enumerable:false,
+				conifgurable:false,
+				writable:false,
+				value:function()
+				{ console.log('val?',ob); return ob; }
+			});
 		}
 		
 		if (typeof ob === 'object')
@@ -118,8 +150,12 @@ Model = (function()
 		{
 			//ob[p] = (typeof ob[p] === 'object' ? new Handle(ob[p]) : ob[p]);
 			//ob[p] = new Handle(ob[p]);
-			ob[p] = makeHandle({},ob[p]);
-			ob[p].__parent = handle;
+			ob[p] = new Handle(ob[p]);
+			Object.defineProperty(ob[p],'__parent',{
+				enumerable:false,
+				configurable:false,
+				get:function(){return handle}
+			});
 			
 			// NOTE: Put this here for private access to its parent while
 			//   retaining its given property name.
@@ -196,7 +232,35 @@ Model = (function()
 					
 					// NOTE: Replace-vs-Modify logic will have to change this, here.
 					//newHandle = (val instanceof Handle ? val : new Handle(val));
-					newHandle = (val instanceof Handle ? val : makeHandle({},val));
+					if (val instanceof Handle)
+					{
+						// Replace.
+						newHandle = val;
+					}
+					else if (typeof val === 'object')
+					{
+						// Modify.
+						newHandle = new Handle(val);
+						
+						// Recursively transfer listeners.
+						// 
+						// NOTE: Seems to work, but on thinking over it, again, perhaps
+						//   passing in a regular object should traverse that regular
+						//   object *alone*, and modify oldHandle *without* replacing it,
+						//   entirely.  I'll think it over.  For now, it effectively does
+						//   already what I made it to do, so all's good.
+						pairWalk(oldHandle,newHandle,function(old,newh,key,path)
+						{
+							console.log('hokay!',key,old[key],newh[key]);
+							
+							if (newh[key])
+								_.extend(listeners[newh[key].__id],listeners[old[key].__id]);
+							delete listeners[old[key].__id];
+						});
+					}
+					else
+						newHandle = new Handle(val);
+					//newHandle = (val instanceof Handle ? val : new Handle(val));
 					ob[k] = newHandle;
 					
 					// Modify listeners object.
@@ -238,6 +302,8 @@ Model = (function()
 		}
 		
 		this.Handle = Handle;
+		
+		this.makeHandle = makeHandle;
 		
 		/*
 		Object.defineProperty(this,'Delete',{
