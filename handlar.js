@@ -81,43 +81,45 @@ Model = (function()
 		ob = (typeof ob === 'object' ?
 				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
 		
-		// Assign immutable id.
-		Object.defineProperty(handle,'__id',{
-			enumerable:false,
-			configurable:false,
-			writable:false,
-			value:modelId+'_'+_.uniqueId()
-		});
+		// Assign these values only if handle has not yet been instantiated.
+		if (!handle.__id)
+		{
+			// Assign immutable id.
+			Object.defineProperty(handle,'__id',{
+				enumerable:false,
+				configurable:false,
+				writable:false,
+				value:modelId+'_'+_.uniqueId()
+			});
 		
-		// Add listeners entry, with arrays of event callbacks.
-		//
-		// NOTE: In the event that the listeners object is moved to a private,
-		//   per-Handle var, this... will likely not change much, now that I
-		//   think about it.
-		listeners[handle.__id] = {change:[],delete:[],all:[]};
-		
-		// Assign add-event-listener function.
-		Object.defineProperty(handle,'$on',{
-			enumerable:false,
-			configurable:false,
-			value:function(eventName,func,args)
-			{ onEvent(self,eventName,func,args); }
-		});
-		
-		// Assign remove-event-listener function.
-		Object.defineProperty(handle,'$off',{
-			enumerable:false,
-			configurable:false,
-			value:function(eventName,func)
-			{
-				return offEvent(self,eventName,func);
-			}
-		});
+			// Add listeners entry, with arrays of event callbacks.
+			//
+			// NOTE: In the event that the listeners object is moved to a private,
+			//   per-Handle var, this... will likely not change much, now that I
+			//   think about it.
+			listeners[handle.__id] = {change:[],delete:[],all:[]};
+			
+			// Assign add-event-listener function.
+			Object.defineProperty(handle,'$on',{
+				enumerable:false,
+				configurable:false,
+				value:function(eventName,func,args)
+				{ onEvent(self,eventName,func,args); }
+			});
+			
+			// Assign remove-event-listener function.
+			Object.defineProperty(handle,'$off',{
+				enumerable:false,
+				configurable:false,
+				value:function(eventName,func)
+				{ return offEvent(self,eventName,func); }
+			});
+		}
 		
 		// Assign basic JSON-object export function.
 		Object.defineProperty(handle,'$',{
 			enumerable:false,
-			configurable:false,
+			configurable:true,
 			get:function()
 			{
 				if (typeof ob !== 'object')
@@ -138,8 +140,7 @@ Model = (function()
 			
 			Object.defineProperty(handle,'valueOf',{
 				enumerable:false,
-				conifgurable:false,
-				writable:false,
+				configurable:true,
 				value:function()
 				{ console.log('val?',ob); return ob; }
 			});
@@ -150,20 +151,33 @@ Model = (function()
 		{
 			//ob[p] = (typeof ob[p] === 'object' ? new Handle(ob[p]) : ob[p]);
 			//ob[p] = new Handle(ob[p]);
-			ob[p] = new Handle(ob[p]);
-			Object.defineProperty(ob[p],'__parent',{
-				enumerable:false,
-				configurable:false,
-				get:function(){return handle}
-			});
 			
-			// NOTE: Put this here for private access to its parent while
-			//   retaining its given property name.
-			Object.defineProperty(ob[p],'$delete',{
-				enumerable:false,
-				configurable:false,
-				value:(function(k){return function(){ self[k] = special.delete }})(p)
-			});
+			console.log('ob[p]',[ob,p,ob[p],ob[p].__id]);
+			// NOTE: If going for soft overwrites, this, too, needs to be a call to
+			//   makeHandle, rather than new Handle(...).  Unless this is only ever
+			//   accessed at creation, and not on assign.  One moment...
+			if (handle[p] instanceof Handle)
+				ob[p] = makeHandle(handle[p],ob[p]);
+			else
+				ob[p] = new Handle(ob[p]);
+			
+			if (handle[p] != ob[p])
+			{
+				Object.defineProperty(ob[p],'__parent',{
+					enumerable:false,
+					configurable:false,
+					get:function(){return handle}
+				});
+			
+				// NOTE: Put this here for private access to its parent while
+				//   retaining its given property name.
+				
+				Object.defineProperty(ob[p],'$delete',{
+					enumerable:false,
+					configurable:false,
+					value:(function(k){return function(){ self[k] = special.delete }})(p)
+				});
+			}
 			
 			Object.defineProperty(handle,p,{
 				enumerable:true,
@@ -230,18 +244,33 @@ Model = (function()
 						return;
 					}
 					
+					// Get old value only if it will be necessary later on in calling
+					// listeners.
+					var oldValue;
+					if (listeners[oldHandle.__id].change.length > 0 ||
+					    listeners[oldHandle.__id].all.length > 0)
+						oldValue = oldHandle.$;
+					
 					// NOTE: Replace-vs-Modify logic will have to change this, here.
 					//newHandle = (val instanceof Handle ? val : new Handle(val));
 					if (val instanceof Handle)
 					{
 						// Replace.
-						newHandle = val;
+						//newHandle = val;
+						throw {
+							name:'BlockingThisForNowException',
+							message:'For now, no replacement.'
+						};
 					}
 					else if (typeof val === 'object')
 					{
 						// Modify.
-						newHandle = new Handle(val);
+						//newHandle = new Handle(val);
+						newHandle = makeHandle(oldHandle,val);
 						
+						/* If not replacing oldHandle, the external data need not
+						   be removed.
+						   
 						// Recursively transfer listeners.
 						// 
 						// NOTE: Seems to work, but on thinking over it, again, perhaps
@@ -257,29 +286,37 @@ Model = (function()
 								_.extend(listeners[newh[key].__id],listeners[old[key].__id]);
 							delete listeners[old[key].__id];
 						});
+						//*/
 					}
 					else
-						newHandle = new Handle(val);
-					//newHandle = (val instanceof Handle ? val : new Handle(val));
-					ob[k] = newHandle;
+						//newHandle = new Handle(val);
+						newHandle = makeHandle(oldHandle,val);
 					
 					// Modify listeners object.
 					// - Copy oldHandle's listeners over to newHandle's.
 					// - Remove oldHandle's listeners. 
-					_.extend(listeners[newHandle.__id],listeners[oldHandle.__id]);
-					delete listeners[oldHandle.__id];
-					
-					// Run change event listeners.
-					listeners[ob[k].__id].change.map(function(action)
+					if (newHandle !== oldHandle)
 					{
-						action.func(val,oldHandle.$,action.args);
-					});
+						_.extend(listeners[newHandle.__id],listeners[oldHandle.__id]);
+						delete listeners[oldHandle.__id];
+					}
 					
-					// Run 'all' event listeners.
-					listeners[ob[k].__id].all.map(function(action)
+					ob[k] = newHandle;
+					
+					if (oldValue)
 					{
-						action.func('change',[val,oldHandle.$,action.args]);
-					});
+						// Run change event listeners.
+						listeners[ob[k].__id].change.map(function(action)
+						{
+							action.func(val,oldValue,action.args);
+						});
+					
+						// Run 'all' event listeners.
+						listeners[ob[k].__id].all.map(function(action)
+						{
+							action.func('change',[val,oldValue,action.args]);
+						});
+					}
 					
 					// Should events also bubble up...?
 					
@@ -305,14 +342,23 @@ Model = (function()
 		
 		this.makeHandle = makeHandle;
 		
-		/*
-		Object.defineProperty(this,'Delete',{
-			enumerable:false,
+		Object.defineProperty(this,'listeners',{
+			enumerable:true,
 			configurable:false,
 			writable:false,
-			value:special.delete
+			value:function()
+			{
+				var ret = {};
+				for (var p in listeners)
+				{
+					var events = {};
+					for (var k in listeners[p])
+						events[k] = listeners[p][k].map(function(a){return _.extend({},a)});
+					ret[p] = events;
+				}
+				return ret;
+			}
 		});
-		//*/
 	};
 
 	return Model;
