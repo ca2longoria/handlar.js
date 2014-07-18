@@ -129,7 +129,8 @@ Removes an event listener.
 
 ##### Handle.$delete
 Removes the calling Handle of the `$delete()` function from its parent.
+Recursively deletes child nodes, in a depth-first property-enumerating manner.
 ###### function()
 
 ##### Handle.\<property\>...
-Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
+Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.  Unfortunately, it wasn't possible to define properties on Number, String, and Boolean types, so these only really call amidst such operations.
