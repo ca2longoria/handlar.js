@@ -116,21 +116,21 @@ This is the most important object "class".  It creates a clone of the supplied o
 Do note, it is intended to work iwth JSON-parsable objects only.
 
 ##### Handle.$
-Returns a clone Handle structure, as a normal JSON object.
 ###### function()
+Returns a clone Handle structure, as a normal JSON object.
 
 ##### Handle.$on
-Adds an event listener.
 ###### function(eventName, func, args)
+Adds an event listener.
 
 ##### Handle.$off
-Removes an event listener.
 ###### function(eventName, func)
+Removes an event listener.
 
 ##### Handle.$delete
+###### function()
 Removes the calling Handle of the `$delete()` function from its parent.
 Recursively deletes child nodes, in a depth-first property-enumerating manner.
-###### function()
 
 ##### Handle.\<property\>...
 Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.  Unfortunately, it wasn't possible to define properties on Number, String, and Boolean types, so these only really call amidst such operations.
