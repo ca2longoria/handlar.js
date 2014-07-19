@@ -101,6 +101,10 @@ handle.b.x = 'ecks'
 ->
 ```
 
+##### Modify all
+
+##### Modify some
+
 ---
 
 #### Reference
