@@ -106,30 +106,30 @@ handle.b.x = 'ecks'
 #### Reference
 
 ##### Model
-These will eventually be more complex, perhaps storing url data akin to _backbone.js_' process, but for now, it acts closer to a namespace than anything else.
+- These will eventually be more complex, perhaps storing url data akin to _backbone.js_' process, but for now, it acts closer to a namespace than anything else.
 
 ===
 
 ##### Handle
-This is the most important object "class".  It creates a clone of the supplied object, and can be referenced in a very close to natural object handling manner.
-
-Do note, it is intended to work iwth JSON-parsable objects only.
+- This is the most important object "class".  It creates a clone of the supplied object, and can be referenced in a very close to natural object handling manner.
+- Do note, it is intended to work iwth JSON-parsable objects only.
 
 ##### Handle.$
-Returns a clone Handle structure, as a normal JSON object.
-###### function()
+_value_
+- Returns a clone Handle structure, as a normal JSON object.
 
 ##### Handle.$on
-Adds an event listener.
-###### function(eventName, func, args)
+_function(eventName, func, args)_
+- Adds an event listener.
 
 ##### Handle.$off
-Removes an event listener.
-###### function(eventName, func)
+_function(eventName, func)_
+- Removes an event listener.
 
 ##### Handle.$delete
-Removes the calling Handle of the `$delete()` function from its parent.
-###### function()
+_function()_
+- Removes the calling Handle of the `$delete()` function from its parent.  Recursively deletes child nodes, in a depth-first property-enumerating manner.
 
 ##### Handle.\<property\>...
-Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
+- Child Handle objects.  Leaf nodes of such objects have implemented `.valueOf` methods, and so can be used in numerical equations and string concatenations without having to finish the reference with a `.$`.
+- Unfortunately, it wasn't possible to define properties on Number, String, and Boolean types, so literal values only really appear amidst such operations.
