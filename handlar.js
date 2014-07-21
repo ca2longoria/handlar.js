@@ -3,30 +3,44 @@ if (!_)
 	throw {name:'RequiresException', message:'Requires underscore.js'};
 
 
-	// Helper function to walk recursively through two objects, together.
-	// - callback: function(a,b,key,path)
-	var pairWalkRec = function pairWalkRec(a,b,path,callback)
+// Helper function to walk recursively through two objects, together.
+// - callback: function(a,b,key,path)
+function pairWalk(a,b,f)
+{
+	path = [];
+	
+	function rec(a,b,key)
 	{
-		if (typeof b === 'undefined')
+		if (typeof a === 'undefined' || typeof b === 'undefined')
 			return;
 		
-		for (var p in a)
+		f(a,b,key,path);
+		
+		a = a[key];
+		b = b[key];
+		
+		if (typeof a !== 'object' || typeof b !== 'object')
+			return;
+		
+		var keys = _.union(Object.keys(a),Object.keys(b));
+		keys.map(function(k)
 		{
-			path.push(p);
-			callback(a,b,p,path);
-			
-			pairWalkRec(a[p],b[p],path,callback);
+			path.push(k);
+			rec(a,b,k);
 			path.pop();
-		}
-	};
-	
-	var pairWalk = function(a,b,callback)
-	{
-		for (var p in a)
-		{
-			pairWalkRec(a,b,[],callback);
-		}
+		});
 	}
+	
+	var keys = _.union(Object.keys(a),Object.keys(b));
+	
+	keys.map(function(k)
+	{
+		path.push(k);
+		rec(a,b,k);
+		path.pop();
+	});
+}
+
 // Perhaps the '.__' prefix can be changed to a random string, unique per
 // page load.
 
@@ -35,9 +49,12 @@ Model = (function()
 	// NOTE: These can be individual per Handle.  Why did I do it this way?
 	var listeners = {};
 	
-	var special = {
-		delete:{}
-	};
+	var special = Object.freeze({
+		delete:{},
+		R:{toString:function(){return 'R'}},
+		RW:{toString:function(){return 'RW'}},
+		RWD:{toString:function(){return 'RWD'}}
+	});
 	
 	var modelId = _.uniqueId();
 	
@@ -111,16 +128,65 @@ Model = (function()
 	
 	// NOTE: I want these Handle objects to remain *independent* of Model
 	//   instances, though...  Will think through, later.
-	function makeHandle(handle,ob)
+	//
+	// NOTE: The parameter flags is present, here, and is intended for the R, RW,
+	//   RWD enums, although those aren't really flags at all (at least not in the
+	//   sense of the typical binary and-able flag).
+	function makeHandle(handle,ob,flags)
 	{
+		flags = (typeof flags === 'undefined' ? special.RWD : flags);
 		var self = handle;
-		var handle = handle;
+		
+		console.log('point Zero:',handle.$);
 		
 		// ob effectively holds a mirror copy of... everthing.  There's a reason I'm
 		// using it, and testing has revealed that reason as valid.  But exactly what
 		// is that reason...?  Was it the leaf node Handles?
-		ob = (typeof ob === 'object' ?
-				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
+		//
+		// NOTE: ob is 'overwritten', here.  Perhaps, depending on the provided
+		//   flags, ob can be an extension of __expand(), __ob, __conceal().  The
+		//   only thing, *then*, is that 'flags' will be used in two separate
+		//   places, independant of $modify or makeHandle.
+		//
+		// NOTE: AAAHRGH!  This is a nasty mess!  I need to remove the ob/handle
+		//   duality.  There's no way I progress properly like this!
+		if (handle instanceof Handle && handle.__id && typeof ob === 'object')
+		{
+			var nob = (typeof ob === 'object' ?
+				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob);
+			
+			handle.__expose();
+			// RW
+			if (typeof handle.__ob === 'object' && flags == special.RW)
+				ob = _.extend(handle.__ob,nob);
+			// R
+			else if (flags == special.R)
+			{
+				if (typeof nob === 'object' && typeof handle.__ob === 'object' &&
+				    !Array.isArray(nob) && !Array.isArray(handle.__ob))
+				{
+					console.log('R, nob:',nob);
+					_.extend(nob,handle.__ob);
+					console.log('   nob:',nob);
+					pairWalk(nob,handle.__ob,function(a,b,k,path)
+					{
+						console.log('pair walk:',a,b,k,path);
+						if (typeof b[k] === 'undefined')
+							delete a[k];
+					});
+				}
+				ob = nob;
+			}
+			// RWD
+			else
+				ob = _.extend({},nob);
+			handle.__conceal();
+		}
+		else
+			ob = (typeof ob === 'object' ?
+			     (Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
+		
+		console.log('ob is:',ob);
 		
 		// Assign these values only if handle has not yet been instantiated.
 		if (!handle.__id)
@@ -218,12 +284,10 @@ Model = (function()
 			enumerable:false,
 			configurable:true,
 			writable:false,
-			value:function(b)
+			value:function(b,flags)
 			{
-				for (var p in b)
-				{
-					
-				}
+				flags = (typeof flags === 'undefined' ? special.RW : flags);
+				makeHandle(this,b,flags);
 			}
 		});
 		
@@ -265,73 +329,86 @@ Model = (function()
 			var hando = _.intersection(hKeys,oKeys);
 			var onoth = _.difference(oKeys,hKeys);
 			
-			//console.log('bah:',handle,ob);
-			//console.log('these two:',hKeys,oKeys);
-			//console.log('these three:',hnoto,hando,onoth);
+			console.log('bah:',handle,ob);
+			console.log('these two:',hKeys,oKeys);
+			console.log('these three:',hnoto,hando,onoth);
 			
-			// Deleting... <- hnoto
-			hnoto.map(function(p)
-			{
-				var h = handle[p];
-				console.log('deleting:',h,h.$);
-				
-				deleteHandle(h,true,true);
-			});
+			console.log('flags:',flags);
+			console.log('point A:',handle.$);
 			
-			// Changing... <- hando
-			hando.map(function(p)
-			{
-				// NOTE: REMEMBER, in each of these cases, hnoto, hando, and onoth,
-				//   *both* handle[p] *and* the local ob[p] must be modified.
-				
-				var oldValue = handle[p].$;
-				
-				makeHandle(handle[p],ob[p]);
-				ob[p] = handle[p];
-				
-				var newValue = handle[p].$;
-				
-				//console.log('changing changed:',oldValue,newValue);
-				
-				// Run 'change' event listeners.
-				listeners[handle[p].__id].change.map(function(action)
+			if (flags == special.RWD)
+				// Deleting... <- hnoto
+				hnoto.map(function(p)
 				{
-					action.func(newValue,oldValue,action.args);
-				});
-			
-				// Run 'all' event listeners.
-				listeners[handle[p].__id].all.map(function(action)
-				{
-					action.func('change',[newValue,oldValue,action.args]);
-				});
+					var h = handle[p];
+					console.log('deleting:',h,h.$);
 					
-			});
+					deleteHandle(h,true,true);
+				});
 			
-			// Adding... <- onoth
-			onoth.map(function(p)
-			{
-				ob[p] = new Handle(ob[p]);
+			console.log('point B:',handle.$);
+			
+			if (flags == special.R || flags == special.RW || flags == special.RWD)
+				// Changing... <- hando
+				hando.map(function(p)
+				{
+					// NOTE: REMEMBER, in each of these cases, hnoto, hando, and onoth,
+					//   *both* handle[p] *and* the local ob[p] must be modified.
+					var oldValue = handle[p].$;
+					
+					console.log('changing from',oldValue);
+					
+					makeHandle(handle[p],ob[p],flags);
+					ob[p] = handle[p];
+					
+					var newValue = handle[p].$;
+					
+					console.log('changing changed:',oldValue,newValue);
+					
+					// Run 'change' event listeners.
+					listeners[handle[p].__id].change.map(function(action)
+					{
+						action.func(newValue,oldValue,action.args);
+					});
 				
-				Object.defineProperty(ob[p],'__parent',{
-					enumerable:false,
-					configurable:false,
-					get:function(){return handle}
+					// Run 'all' event listeners.
+					listeners[handle[p].__id].all.map(function(action)
+					{
+						action.func('change',[newValue,oldValue,action.args]);
+					});
+						
 				});
-				Object.defineProperty(ob[p],'__property',{
-					enumerable:false,
-					configurable:false,
-					writable:false,
-					value:p
+			
+			console.log('point C:',handle.$);
+			
+			if (flags == special.RW || flags == special.RWD)
+				// Adding... <- onoth
+				onoth.map(function(p)
+				{
+					ob[p] = new Handle(ob[p]);
+					
+					Object.defineProperty(ob[p],'__parent',{
+						enumerable:false,
+						configurable:false,
+						get:function(){return handle}
+					});
+					Object.defineProperty(ob[p],'__property',{
+						enumerable:false,
+						configurable:false,
+						writable:false,
+						value:p
+					});
+			
+					Object.defineProperty(handle,p,{
+						enumerable:true,
+						configurable:true,
+						get:(function(k){return function(){return ob[k]}})(p),
+						set:(function(k){return function(val)
+						{ handleSet(val,k); }})(p)
+					});
 				});
-		
-				Object.defineProperty(handle,p,{
-					enumerable:true,
-					configurable:true,
-					get:(function(k){return function(){return ob[k]}})(p),
-					set:(function(k){return function(val)
-					{ handleSet(val,k); }})(p)
-				});
-			});
+			
+			console.log('point D:',handle.$);
 			
 			function handleSet(val,k)
 			{
@@ -361,11 +438,11 @@ Model = (function()
 				}
 				else if (typeof val === 'object')
 				{
-					newHandle = makeHandle(oldHandle,val);
+					newHandle = makeHandle(oldHandle,val,flags);
 				}
 				else
 				{
-					newHandle = makeHandle(oldHandle,val);						
+					newHandle = makeHandle(oldHandle,val,flags);
 				}
 				
 				// Adopt oldHandle's listeners.
@@ -408,9 +485,13 @@ Model = (function()
 			
 		}
 		
+		this.R = special.R;
+		this.RW = special.RW;
+		this.RWD = special.RWD;
+		
 		this.Handle = Handle;
 		
-		this.makeHandle = makeHandle;
+		this.makeHandle = makeHandle;	
 		
 		Object.defineProperty(this,'listeners',{
 			enumerable:true,
