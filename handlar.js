@@ -46,6 +46,8 @@ function pairWalk(a,b,f)
 
 Model = (function()
 {
+	// { All this up here
+	
 	// NOTE: These can be individual per Handle.  Why did I do it this way?
 	var listeners = {};
 	
@@ -79,11 +81,29 @@ Model = (function()
 		return index >= 0;
 	};
 	
+	function isHandle(a)
+	{ return a.__id && listeners[a.__id]; }
+
+	// 'a' is either an Array or one's descendant.
+	function isArray(a)
+	{
+		var res = false;
+		while (a != null && !(res=Array.isArray(a)))
+			a = a.__proto__;
+		return res;
+	}
 	
 	function Handle(ob)
 	{
 		makeHandle(this,ob);
 	}
+	
+	function ArrayHandle(ob)
+	{
+		makeHandle(this,ob);
+	}
+	ArrayHandle.prototype = Array.prototype;
+	// }
 	
 	// NOTE: callEvent is intended as an internal parameter.  The publicly
 	//   visible $delete method will *always* call its topmost event listener
@@ -106,7 +126,7 @@ Model = (function()
 		var todel = [];
 		Object.getOwnPropertyNames(h).map(function(x)
 		{
-			if (h[x] instanceof Handle && h[x] !== h.__parent)
+			if (isHandle(h[x]) && h[x] !== h.__parent)
 				// Recursion, here.
 				deleteHandle(h[x],eventRecurse,(callEvent&&eventRecurse),ind+1);
 			else
@@ -117,6 +137,7 @@ Model = (function()
 		
 		if (h.__parent)
 		{
+			// NOTE: Here, the ob-removal refactoring will come into play.
 			h.__parent.__expose();
 			delete h.__parent[h.__property];
 			delete h.__parent.__ob[h.__property];
@@ -139,57 +160,22 @@ Model = (function()
 		
 		console.log('point Zero:',handle.$);
 		
-		// ob effectively holds a mirror copy of... everthing.  There's a reason I'm
-		// using it, and testing has revealed that reason as valid.  But exactly what
-		// is that reason...?  Was it the leaf node Handles?
-		//
-		// NOTE: ob is 'overwritten', here.  Perhaps, depending on the provided
-		//   flags, ob can be an extension of __expand(), __ob, __conceal().  The
-		//   only thing, *then*, is that 'flags' will be used in two separate
-		//   places, independant of $modify or makeHandle.
-		//
-		// NOTE: AAAHRGH!  This is a nasty mess!  I need to remove the ob/handle
-		//   duality.  There's no way I progress properly like this!
-		if (handle instanceof Handle && handle.__id && typeof ob === 'object')
-		{
-			var nob = (typeof ob === 'object' ?
-				(Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob);
-			
-			handle.__expose();
-			// RW
-			if (typeof handle.__ob === 'object' && flags == special.RW)
-				ob = _.extend(handle.__ob,nob);
-			// R
-			else if (flags == special.R)
-			{
-				if (typeof nob === 'object' && typeof handle.__ob === 'object' &&
-				    !Array.isArray(nob) && !Array.isArray(handle.__ob))
-				{
-					console.log('R, nob:',nob);
-					_.extend(nob,handle.__ob);
-					console.log('   nob:',nob);
-					pairWalk(nob,handle.__ob,function(a,b,k,path)
-					{
-						console.log('pair walk:',a,b,k,path);
-						if (typeof b[k] === 'undefined')
-							delete a[k];
-					});
-				}
-				ob = nob;
-			}
-			// RWD
-			else
-				ob = _.extend({},nob);
-			handle.__conceal();
-		}
-		else
-			ob = (typeof ob === 'object' ?
-			     (Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
+		// Array... what about arrays?  What was I doing here, again?
+		if (isArray(handle) != isArray(ob))
+			throw {
+				name:'MismatchedParameterTypesException',
+				message:'handle and ob must both be Arrays if either is.'
+			};
+		
+		// NOTE: Shouldn't need any modification on ob, if it is to be treated in
+		//   an immutable, read-only manner.
+		//ob = (typeof ob === 'object' ?
+		//     (Array.isArray(ob) ? ob.slice() : _.extend({},ob)): ob)
 		
 		console.log('ob is:',ob);
 		
 		// Assign these values only if handle has not yet been instantiated.
-		if (!handle.__id)
+		if (!isHandle(handle))
 		{
 			// Assign immutable id.
 			Object.defineProperty(handle,'__id',{
@@ -222,34 +208,133 @@ Model = (function()
 				{ return offEvent(self,eventName,func); }
 			});
 			
+			Object.defineProperty(handle,'$delete',{
+				enumerable:false,
+				configurable:true,
+				writable:false,
+				value:function(eventRecurse)
+				{
+					eventRecurse = (typeof eventRecurse !== 'undefined' ?
+						eventRecurse : false);
+					deleteHandle(self,true,eventRecurse);
+				}
+			});
 		}
 		
-		// NOTE: __expose and __conceal are HACKS.  These shouldn't be necessary,
-		//   but it turns out the ob[k] get override requires the *parent's* local
-		//   'ob' variable, too.  At least for the delete.  This is happening,
-		//   because I chose for $delete to be called from the Handle being
-		//   deleted, and not its parent, deleting its child.  I may choose to
-		//   revise this, later.
-		Object.defineProperty(handle,'__expose',{
-			enumerable:false,
-			configurable:true,
-			writable:false,
-			value:function()
-			{
-				this.__ob = ob;
-			}
-		});
 		
-		Object.defineProperty(handle,'__conceal',{
-			enumerable:false,
-			configurable:true,
-			writable:false,
-			value:function()
+		if (typeof ob === 'object')
+		{
+			// Array.
+			if (isArray(ob))
 			{
-				delete this.__ob;
+				// $
+				Object.defineProperty(handle,'$',{
+					enumerable:false,
+					configurable:false,
+					get:function()
+					{
+						var ret = [];
+						for (var p in this)
+							ret.push(this[p].$);
+						return ret;
+					}
+				});
+				
+				// $type
+				Object.defineProperty(handle,'$type',{
+					enumerable:false,
+					configurable:false,
+					get:function(){ return 'array'; }
+				});
+				
+				// $modify
+				Object.defineProperty(handle,'$modify',{
+					enumerable:false,
+					configurable:false,
+					get:function(){ return undefined; }
+				});
+				
+				// NOTE: *Should* read methods be overridden?  Ought it not be enough to
+				//   perform such methods with the results of a '$' call?
+				// 
+				// { Overrides
+				//
+				// { Override read methods.
+				// 
+				// concat
+				// every
+				// filter
+				// 
+				// indexOf
+				// join
+				// keys
+				// lastIndexOf
+				// 
+				// slice
+				// some
+				//
+				// toLocaleString
+				// toString
+				// 
+				// }
+				
+				// { Override sort methods.
+				// 
+				// reverse
+				// sort
+				//
+				// }
+				
+				// { Override add methods.
+				//
+				// * forEach
+				// * map
+				// push
+				// * reduce
+				// * reduceRight
+				// * splice
+				// unshift
+				// 
+				// }
+
+				// { Override remove methods.
+				//
+				// * forEach
+				// * map
+				// pop
+				// * reduce
+				// * reduceRight
+				// shift
+				// * splice
+				//
+				// }
+				//
+				// }
 			}
-		});
-	
+			
+			// Object.
+			else
+			{
+				// $
+				// $type
+				// $modify
+				// Add properties.
+				// Delete properties.
+			}
+			
+			// Change properties.
+		}
+		else
+		{
+			// Primitive.
+			
+			// $
+			// $type
+			// $modify
+		}
+		
+		return handle;
+		
 		// Assign basic JSON-object export function.
 		Object.defineProperty(handle,'$',{
 			enumerable:false,
@@ -265,18 +350,6 @@ Model = (function()
 					ret[p] = ob[p].$;
 				//console.log('the $:',ret);
 				return ret;
-			}
-		});
-		
-		Object.defineProperty(handle,'$delete',{
-			enumerable:false,
-			configurable:true,
-			writable:false,
-			value:function(eventRecurse)
-			{
-				eventRecurse = (typeof eventRecurse !== 'undefined' ?
-					eventRecurse : false);
-				deleteHandle(self,true,eventRecurse);
 			}
 		});
 		
@@ -427,7 +500,7 @@ Model = (function()
 				//   changed?
 				
 				// Assign newHandle.
-				if (val instanceof Handle)
+				if (isHandle(val))
 				{
 					// Replace.
 					//newHandle = val;
@@ -490,6 +563,7 @@ Model = (function()
 		this.RWD = special.RWD;
 		
 		this.Handle = Handle;
+		this.ArrayHandle = ArrayHandle;
 		
 		this.makeHandle = makeHandle;	
 		
