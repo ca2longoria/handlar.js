@@ -10,6 +10,7 @@ Simple MVC without the V or the C.
 #### Dependencies
 - underscore.js
 - _.defineProperty_-compatible browser
+- .\__proto__-compatible browser
 
 ---
 
