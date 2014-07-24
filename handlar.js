@@ -93,6 +93,13 @@ Model = (function()
 		return res;
 	}
 	
+	function getArrayProto(a)
+	{
+		while (a != null && !Array.isArray(a))
+			a = a.__proto__;
+		return a;
+	}
+	
 	function Handle(ob)
 	{
 		makeHandle(this,ob);
@@ -104,6 +111,48 @@ Model = (function()
 	}
 	ArrayHandle.prototype = Array.prototype;
 	// }
+	
+	// NOTE: This belongs at the makeHandle level, somewhere before makeHandle.
+	function setHandleProperty(handle,key,parentHandle)
+	{
+		if (!handle.__parent)
+			Object.defineProperty(handle,'__parent',{
+				enumerable:false,
+				configurable:false,
+				get:function(){ return parentHandle }
+			});
+		
+		// A Handle's parent is unmodifiable.
+		else if (handle.__parent != parentHandle)
+		{
+			throw {
+				name:'ParentChangeException',
+				message:'Handle parent cannot change (attempting to change from ' +
+					handle.__parent.$+' to '+
+					parentHandle.$+')'
+			}
+		}
+			
+		Object.defineProperty(handle,'__property',{
+			enumerable:false,
+			configurable:true,
+			get:function(){ return key }
+		});
+		
+		Object.defineProperty(parentHandle,key,{
+			enumerable:true,
+			configurable:true,
+			get:function(){ return handle },
+			set:function(val)
+			{
+				// Setting or something, somehow
+				console.log('Boy am I *set* (to this value: '+val+')');
+				
+				// Here, the recursion happens.
+				makeHandle(handle,val,special.RWD);
+			}
+		});
+	}
 	
 	// NOTE: callEvent is intended as an internal parameter.  The publicly
 	//   visible $delete method will *always* call its topmost event listener
@@ -190,7 +239,7 @@ Model = (function()
 			// NOTE: In the event that the listeners object is moved to a private,
 			//   per-Handle var, this... will likely not change much, now that I
 			//   think about it.
-			listeners[handle.__id] = {change:[],delete:[],all:[]};
+			listeners[handle.__id] = {change:[],delete:[],all:[],add:[],sort:[]};
 			
 			// Assign add-event-listener function.
 			Object.defineProperty(handle,'$on',{
@@ -234,8 +283,8 @@ Model = (function()
 					get:function()
 					{
 						var ret = [];
-						for (var p in this)
-							ret.push(this[p].$);
+						for (var i=0; i < this.length; ++i)
+							ret.push(this[i].$);
 						return ret;
 					}
 				});
@@ -260,6 +309,7 @@ Model = (function()
 				// { Overrides
 				//
 				// { Override read methods.
+				//   NO EVENTS FIRED
 				// 
 				// concat
 				// every
@@ -275,41 +325,191 @@ Model = (function()
 				//
 				// toLocaleString
 				// toString
-				// 
+				
+				// NOTE: These merely call their Array.prototype selves upon 'this.$'.
+				//   It is then more efficient in code to simply store the result of
+				//   '$', and call subsequent functions off that.
+				['concat','every','filter','indexOf','join','keys',
+				 'lastIndexOf','slice','some','toLocaleString','toString']
+					.map(function(property)
+					{
+						Object.defineProperty(handle,property,{
+							enumerable:false,
+							configurable:true,
+							value:function()
+							{	return Array.prototype[property].apply(this.$,arguments); }
+						});
+					});
+
 				// }
 				
 				// { Override sort methods.
-				// 
+				//   SORT EVENT FIRED
+				//
 				// reverse
 				// sort
-				//
+				// 
+
+				Object.defineProperty(handle,'reverse',{
+					enumerable:false,
+					configurable:true,
+					value:function()
+					{
+						Array.prototype.reverse.call(this);
+						for (var i in this)
+							this[i].__property = i;
+						
+						listeners[this.__id].sort.map(function(a)
+						{ a.func(this.$,a.args); });
+					}
+				});
+				
+				Object.defineProperty(handle,'sort',{
+					enumerable:false,
+					configurable:true,
+					value:function(compareFunction)
+					{
+						// Calling '$' in the compareFunction directly would call the full
+						// '$' traversal for every entry in the sort function's algorithm
+						// efficiency... method...  Ah, what are the words I seek?
+						var arr = Array.prototype.map.call(this,function(a)
+						{ return {h:a,$:a.$} });
+						
+						arr.sort(function(a,b)
+						{
+							return compareFunction(a.$,b.$);
+						});
+						
+						// WARNING: This relies on '= Handle', which presently throws an
+						//   exception.
+						//
+						// ASSUME: __property is assigned on '= Handle'.
+						for (var i in arr)
+							this[i] = arr[i].h;
+						
+						listeners[this.__id].sort.map(function(a)
+						{ a.func(this.$,a.args); });
+					}
+				});
+				
 				// }
 				
 				// { Override add methods.
+				//   ADD EVENT FIRED
 				//
-				// * forEach
-				// * map
 				// push
-				// * reduce
-				// * reduceRight
 				// * splice
 				// unshift
 				// 
+				
+				Object.defineProperty(handle,'push',{
+					enumerable:false,
+					configurable:true,
+					value:function() // WAIT!  This ought be v1,v2,...,vn
+					{
+						for (var i in arguments)
+						{
+							var val = arguments[i];
+							var h;
+							
+							// Handle
+							// 
+							// WARNING: '= Handle' hasn't been fully thought through.
+							if (isHandle(val))
+								h = val;
+							
+							// non-Handle
+							else
+								h = makeHandle((isArray(val) ? [] : {}),val,flags);
+							
+							var property = this.length;
+							
+							Array.prototype.push.call(this,h);
+							setHandleProperty(h,property,handle);
+							
+							listeners[this.__id].add.map(function(a)
+							{ a.func(val,property,a.args); });
+						}
+						return this.length;
+					}
+				});
+				
+				Object.defineProperty(handle,'unshift',{
+					enumerable:false,
+					configurable:true,
+					value:function() // WAIT!  This ought be v1,v2,...,vn
+					{
+						for (var i in arguments)
+						{
+							var val = arguments[i];
+							var h;
+							
+							// Handle
+							// 
+							// WARNING: '= Handle' hasn't been fully thought through.
+							if (isHandle(val))
+								h = val;
+							
+							// non-Handle
+							else
+								h = makeHandle((isArray(val) ? [] : {}),val,flags);
+							
+							Array.prototype.unshift.call(this,h);
+							
+							listeners[this.__id].add.map(function(a)
+							{ a.func(val,0,a.args); });
+						}
+						return this.length;
+					}
+				});
+			
+				//
 				// }
 
 				// { Override remove methods.
+				//   REMOVE EVENT FIRED
 				//
-				// * forEach
-				// * map
 				// pop
-				// * reduce
-				// * reduceRight
 				// shift
 				// * splice
 				//
 				// }
+
+				// { Override accessor methods.
+				//   EVENTS?
+				// 
+				// forEach
+				// map
+				// reduce
+				// recudeRight
 				//
 				// }
+				//
+				// }
+				
+				// NOTE: Ah, wait, gotta do the property sets bit for add/delete/change.
+				var hKeys = Object.keys(handle);
+				var oKeys = Object.keys(ob).filter(
+				function(k){ return typeof ob[k] !== 'undefined' });
+			
+				var hnoto = _.difference(hKeys,oKeys);
+				var hando = _.intersection(hKeys,oKeys);
+				var onoth = _.difference(oKeys,hKeys);
+		
+				// Add properties.
+				if (flags === special.RW || flags === special.RWD)
+					onoth.map(function(p)
+					//for (var i in ob)
+					{
+						handle.push(ob[p]);
+					});
+				
+				// Delete propreties.
+				if (flags === special.RWD)
+					hnoto.map(function(p)
+					{
+						
+					});
 			}
 			
 			// Object.
@@ -329,6 +529,15 @@ Model = (function()
 			// Primitive.
 			
 			// $
+			Object.defineProperty(handle,'$',{
+				enumerable:false,
+				configurable:true,
+				get:function()
+				{
+					return ob;
+				}
+			});
+			
 			// $type
 			// $modify
 		}
