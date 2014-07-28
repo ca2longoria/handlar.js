@@ -408,7 +408,8 @@ Model = (function()
 						//
 						// ASSUME: __property is assigned on '= Handle'.
 						for (var i in arr)
-							this[i] = arr[i].h;
+							//this[i] = arr[i].h;
+							setHandleProperty(arr[i].h,i,this);
 						
 						var self = this;
 						listeners[this.__id].sort.map(function(a)
