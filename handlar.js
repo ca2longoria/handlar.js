@@ -115,24 +115,15 @@ Model = (function()
 	// NOTE: This belongs at the makeHandle level, somewhere before makeHandle.
 	function setHandleProperty(handle,key,parentHandle)
 	{
+		console.log('setHandleProperty:',handle.$,key,parentHandle.$);
+		
 		if (!handle.__parent)
 			Object.defineProperty(handle,'__parent',{
 				enumerable:false,
-				configurable:false,
+				configurable:true,
 				get:function(){ return parentHandle }
 			});
 		
-		// A Handle's parent is unmodifiable.
-		else if (handle.__parent != parentHandle)
-		{
-			throw {
-				name:'ParentChangeException',
-				message:'Handle parent cannot change (attempting to change from ' +
-					handle.__parent.$+' to '+
-					parentHandle.$+')'
-			}
-		}
-			
 		Object.defineProperty(handle,'__property',{
 			enumerable:false,
 			configurable:true,
@@ -204,6 +195,23 @@ Model = (function()
 	//   sense of the typical binary and-able flag).
 	function makeHandle(handle,ob,flags)
 	{
+		// NOTE: Putting this here, for now.
+		//
+		// NOTE: This effectively *orphans* a Handle.  This should not happen,
+		//   except to be followed by one of two cases:
+		//
+		//   1) orphaned Handle is then assigned as another property under
+		//      another parent Handle.
+		//   2) orphaned Handle has '$delete()' called upon itself, and is removed
+		//      from all states of natural be-ing.
+		if (isHandle(handle) && isHandle(ob))
+		{
+			setHandleProperty(ob,handle.__property,handle.__parent);
+			delete handle.__parent;
+			delete handle.__property;
+			return ob;
+		}
+		
 		flags = (typeof flags === 'undefined' ? special.RWD : flags);
 		var self = handle;
 		
@@ -355,12 +363,29 @@ Model = (function()
 					configurable:true,
 					value:function()
 					{
-						Array.prototype.reverse.call(this);
-						for (var i in this)
-							this[i].__property = i;
+						// NOTE: This isn't working.  I'm thinking it has something to do
+						//   with property assigns, since these were defined with
+						//   getters/setters, rather than simply 'a[i] = b'.
+						//Array.prototype.reverse.apply(this);
+						var halflen = this.length >> 1;
+						for (var i=0; i < halflen; ++i)
+						{
+							var j = this.length-1-i;
+							var a = this[i];
+							var b = this[j];
+							setHandleProperty(a,j,a.__parent);
+							setHandleProperty(b,i,a.__parent);
+						}
 						
+						var self = this;
+						console.log('self/this:',self.$);
 						listeners[this.__id].sort.map(function(a)
-						{ a.func(this.$,a.args); });
+						{
+							console.log('come on...',self,self.$);
+							a.func(self.$,a.args);
+						});
+						
+						return this;
 					}
 				});
 				
@@ -377,6 +402,7 @@ Model = (function()
 						
 						arr.sort(function(a,b)
 						{
+							console.log('compare:',a,b);
 							return compareFunction(a.$,b.$);
 						});
 						
@@ -387,8 +413,9 @@ Model = (function()
 						for (var i in arr)
 							this[i] = arr[i].h;
 						
+						var self = this;
 						listeners[this.__id].sort.map(function(a)
-						{ a.func(this.$,a.args); });
+						{ a.func(self.$,a.args); });
 					}
 				});
 				
@@ -455,6 +482,7 @@ Model = (function()
 								h = makeHandle((isArray(val) ? [] : {}),val,flags);
 							
 							Array.prototype.unshift.call(this,h);
+							setHandleProperty(h,0,handle);
 							
 							listeners[this.__id].add.map(function(a)
 							{ a.func(val,0,a.args); });
@@ -542,6 +570,8 @@ Model = (function()
 			// $modify
 		}
 		
+		/*
+		// Old Stuff {
 		return handle;
 		
 		// Assign basic JSON-object export function.
@@ -752,6 +782,8 @@ Model = (function()
 				return newHandle;
 			}	
 		}	
+		// }
+		//*/
 		
 		//console.log('final ob:',ob);
 		
