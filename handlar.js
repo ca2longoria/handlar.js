@@ -136,9 +136,6 @@ Model = (function()
 			get:function(){ return handle },
 			set:function(val)
 			{
-				// Setting or something, somehow
-				//console.log('Boy am I *set* (to this value: '+val+')');
-				
 				// Here, the recursion happens.
 				makeHandle(handle,val,special.RWD);
 			}
