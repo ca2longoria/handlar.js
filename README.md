@@ -1,6 +1,8 @@
 
 ###handlar.js
 
+## Dropped this a while back, may pick it up, again, soon.  A more complete version was made for a prior company, so this one never got the updates.  Will recode.
+
 Simple MVC without the V or the C.
 
 - Simple JSON object event handling library.
